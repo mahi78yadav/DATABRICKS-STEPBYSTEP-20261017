@@ -114,6 +114,46 @@ ON '<ACCESS_CONNECTOR_RESOURCE_ID>'
 COMMENT 'Managed identity credential for retail ADLS Gen2';
 ```
 
+## Step 2.1: Create SQL Warehouse
+
+Create a SQL Warehouse in the Azure Databricks workspace to execute SQL scripts for the Retail Lakehouse project.
+
+**Workspace:** `dbw-retail-lakehouse-uat`
+
+### Configuration
+
+| Setting | Value |
+|---|---|
+| SQL Warehouse Name | `retailuat` |
+| Warehouse Type | Pro (or available suitable type) |
+| Cluster Size | 2X-Small |
+| Auto Stop | 10 minutes |
+| Minimum Clusters | 1 |
+| Maximum Clusters | 1 |
+
+### Steps
+
+1. Open the Azure Databricks workspace `dbw-retail-lakehouse-uat`.
+2. Select **SQL Warehouses** from the left navigation menu.
+3. Click **Create SQL warehouse**.
+4. Enter the configuration values listed above.
+5. Click **Create** and wait until the warehouse status is **Running**.
+6. Open **SQL Editor** and select the `retailuat` SQL Warehouse.
+
+### Purpose
+
+   The SQL Warehouse will be used to execute SQL scripts for:
+   
+   - Creating the Unity Catalog catalog and schemas.
+   - Creating storage credentials and external locations.
+   - Registering source tables.
+   - Creating Bronze Delta tables.
+   - Validating table data and row counts.
+   
+   **Note:** A SQL Warehouse is different from a traditional Databricks compute cluster. Start with a small warehouse for this learning project and stop it when you finish working to control costs.
+
+
+
 ## 3. Create Catalog and Schemas
 
 ```sql
