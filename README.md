@@ -281,4 +281,10 @@ SELECT COUNT(*) FROM retailuat.bronze.orders;
 - The above Bronze ingestion is an initial load, not an incremental ingestion process.
 - Configure separate external locations for Silver and Gold when those layers are implemented.
 
-**Next Phase:** Transform Bronze data into Silver by applying data cleansing, validation, and standardization rules.
+## 9. Implementing Bronze Layer
+
+Refer to the detailed notebook implementation and execution steps:
+
+[Bronze Layer Implementation](MedallionArchitecture/Bronze.md)
+
+
