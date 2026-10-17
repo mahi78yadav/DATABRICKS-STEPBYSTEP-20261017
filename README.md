@@ -287,4 +287,9 @@ Refer to the detailed notebook implementation and execution steps:
 
 [Bronze Layer Implementation](MedallionArchitecture/Bronze.md)
 
+## 10. Implementing Bronze Layer
+
+Refer to the detailed notebook implementation and execution steps:
+
+[Silver Layer Implementation](MedallionArchitecture/Silver.md)
 
