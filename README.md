@@ -6,7 +6,8 @@
 
 Build a retail sales analytics solution using Azure Databricks and ADLS Gen2, following the Medallion Architecture: Source → Bronze → Silver → Gold.
 
-**Business Analysis Scope**
+### Business Analysis Scope
+
 - Product Performance
 - Store Performance
 - Customer Purchase Analysis
@@ -41,7 +42,7 @@ Create the following folders inside both the `source` and `bronze` containers:
 customers/
 products/
 stores/
-sales/
+orders/
 ```
 
 Download the source files from GitHub:
@@ -77,12 +78,14 @@ Upload the corresponding files into the appropriate folders in the `source` cont
 
 - Resource group and ADLS Gen2 storage account created.
 - Four containers created.
-- Customer, product, store, and sales folders created in Source and Bronze.
+- Customer, product, store, and orders folders created in Source and Bronze.
 - Source files uploaded from GitHub.
 - Access Connector created and required roles assigned.
 - Azure Databricks workspace created and launched.
 
 **Next Phase:** Configure Unity Catalog, create the storage credential and external locations, and begin Bronze ingestion.
+
+---
 
 # Azure Databricks — Unity Catalog and Bronze Ingestion
 
@@ -92,7 +95,7 @@ Upload the corresponding files into the appropriate folders in the `source` cont
 - Storage account: `stdatabricksretailuat`
 - Access Connector: `ac-databricks-retail-uat`
 - ADLS Gen2 containers: `source`, `bronze`, `silver`, `gold`
-- Source folders: `customers`, `products`, `stores`, `sales`
+- Source folders: `customers`, `products`, `stores`, `orders`
 - Unity Catalog enabled with required privileges
 - Databricks SQL Warehouse available
 
@@ -139,8 +142,8 @@ CREATE EXTERNAL LOCATION IF NOT EXISTS ext_source_stores
 URL 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/stores/'
 WITH (STORAGE CREDENTIAL `cred-adls-retail-uat`);
 
-CREATE EXTERNAL LOCATION IF NOT EXISTS ext_source_sales
-URL 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/sales/'
+CREATE EXTERNAL LOCATION IF NOT EXISTS ext_source_orders
+URL 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/orders/'
 WITH (STORAGE CREDENTIAL `cred-adls-retail-uat`);
 ```
 
@@ -159,8 +162,8 @@ CREATE EXTERNAL LOCATION IF NOT EXISTS ext_bronze_stores
 URL 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/stores/'
 WITH (STORAGE CREDENTIAL `cred-adls-retail-uat`);
 
-CREATE EXTERNAL LOCATION IF NOT EXISTS ext_bronze_sales
-URL 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/sales/'
+CREATE EXTERNAL LOCATION IF NOT EXISTS ext_bronze_orders
+URL 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/orders/'
 WITH (STORAGE CREDENTIAL `cred-adls-retail-uat`);
 ```
 
@@ -184,10 +187,10 @@ USING CSV
 OPTIONS ('header' = 'true', 'inferSchema' = 'true')
 LOCATION 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/stores/';
 
-CREATE TABLE IF NOT EXISTS retailuat.source.sales
+CREATE TABLE IF NOT EXISTS retailuat.source.orders
 USING CSV
 OPTIONS ('header' = 'true', 'inferSchema' = 'true')
-LOCATION 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/sales/';
+LOCATION 'abfss://source@stdatabricksretailuat.dfs.core.windows.net/orders/';
 ```
 
 ## 6. Begin Bronze Ingestion
@@ -210,10 +213,10 @@ USING DELTA
 LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/stores/'
 AS SELECT * FROM retailuat.source.stores;
 
-CREATE TABLE IF NOT EXISTS retailuat.bronze.sales
+CREATE TABLE IF NOT EXISTS retailuat.bronze.orders
 USING DELTA
-LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/sales/'
-AS SELECT * FROM retailuat.source.sales;
+LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/orders/'
+AS SELECT * FROM retailuat.source.orders;
 ```
 
 ## 7. Validate Tables and Row Counts
@@ -225,7 +228,7 @@ SHOW TABLES IN retailuat.bronze;
 SELECT COUNT(*) FROM retailuat.bronze.customers;
 SELECT COUNT(*) FROM retailuat.bronze.products;
 SELECT COUNT(*) FROM retailuat.bronze.stores;
-SELECT COUNT(*) FROM retailuat.bronze.sales;
+SELECT COUNT(*) FROM retailuat.bronze.orders;
 ```
 
 ## 8. Important Notes
