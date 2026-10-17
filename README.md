@@ -293,19 +293,23 @@ Refer to the detailed notebook implementation and execution steps:
 
 [Silver Layer Implementation](MedallionArchitecture/Silver.md)
 
+
 ## 11. Implementing Gold Layer
 
 [Gold Layer Implementation](MedallionArchitecture/Gold.md)
+
 
 ## 12. Implementing Auto Loader Ingestion
 
 [Auto Loader Implementation](MedallionArchitecture/AutoLoader.md)
 
+
 ## 13.  Implementing Auto Loader Ingestion
 
 [Databricks_Data_Quality_Implementation](MedallionArchitecture/Databricks_Data_Quality_Implementation.md)
 
-## 14.  Implementing Pipeline Implementation
+
+## 14.  Implementing Pipeline 
 
 [PipelineImplementation](MedallionArchitecture/PipelineImplementation.md)
 
