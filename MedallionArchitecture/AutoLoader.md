@@ -1,33 +1,39 @@
-# Auto Loader Ingestion — Azure Databricks
+# Azure Databricks Auto Loader Ingestion — UAT
 
 ## 1. Objective
 
-Implement Databricks Auto Loader to incrementally ingest new CSV files from Azure Data Lake Storage Gen2 (ADLS Gen2) into Bronze Delta tables.
+Implement Auto Loader to incrementally ingest CSV files from the ADLS Gen2 `source` container into Delta tables in the `bronze` container.
 
-Auto Loader processes new files, maintains schema and checkpoint metadata, and prevents already-processed files from being reprocessed during normal subsequent runs.
+**Entities:** `customers`, `products`, `stores`, `orders`
 
-## 2. Configuration
+## 2. Prerequisites
 
-| Setting | Value |
+Confirm the following resources are available:
+
+| Resource | Name |
 |---|---|
-| Storage Account | `stdatabricksretailuat` |
+| Databricks workspace | `dbw-retail-lakehouse-uat` |
+| Storage account | `stdatabricksretailuat` |
 | Catalog | `retailuat` |
-| Source Container | `source` |
-| Bronze Container | `bronze` |
-| Entities | `customers`, `products`, `stores`, `orders` |
-| Input Format | CSV |
-| Output Format | Delta |
-| Processing Mode | `availableNow=True` |
+| Bronze schema | `retailuat.bronze` |
+| Storage credential | `cred-adls-retail-uat` |
 
-## 3. Prerequisites
+Unity Catalog external locations must provide access to the required source, Bronze, and metadata paths. Do not configure storage account keys in Spark.
 
-- ADLS Gen2 storage account and source files are available.
-- Unity Catalog storage credential `cred-adls-retail-uat` is configured.
-- External locations and permissions allow access to the required source and Bronze paths.
-- The Databricks compute environment supports the required storage access.
-- The Auto Loader output folders are separate from existing Bronze Delta folders.
+## 3. Source and Target Paths
 
-## 4. Configure paths and entities
+| Entity | Source folder | Bronze target |
+|---|---|---|
+| Customers | `source/customers/` | `bronze/customers/` |
+| Products | `source/products/` | `bronze/products/` |
+| Stores | `source/stores/` | `bronze/stores/` |
+| Orders | `source/orders/` | `bronze/orders/` |
+
+Source files are stored in the corresponding folders in ADLS Gen2.
+
+## 4. Configure Paths and Entities
+
+Create a Python cell in the **Auto Loader Ingestion** notebook.
 
 ```python
 storage_account = "stdatabricksretailuat"
@@ -47,37 +53,51 @@ catalog_name = "retailuat"
 entities = ["customers", "products", "stores", "orders"]
 ```
 
-**Important:** The metadata volume must exist and be accessible. Create the required volume and grant permissions before running the notebook. Do not replace this path with an Azure storage key.
+Run the cell.
 
-## 5. Define the Auto Loader ingestion function
+## 5. Validate Source Access
+
+Run this test before starting ingestion.
+
+```python
+display(
+    dbutils.fs.ls(source_base + "customers/")
+)
+```
+
+Confirm that `customers.csv` is listed.
+
+## 6. Define the Auto Loader Function
+
+Create the next Python cell and run it.
 
 ```python
 def ingest_with_autoloader(entity):
 
     source_path = f"{source_base}{entity}/"
+    target_path = f"{bronze_base}{entity}/"
 
-    # Separate output from existing Bronze Delta data
-    target_path = f"{bronze_base}{entity}_autoloader/"
-
-    schema_location = (
-        f"{metadata_base}/{entity}/schema"
-    )
-
-    checkpoint_path = (
-        f"{metadata_base}/{entity}/checkpoint"
-    )
+    schema_location = f"{metadata_base}/{entity}/schema"
+    checkpoint_path = f"{metadata_base}/{entity}/checkpoint"
 
     print(f"Starting Auto Loader: {entity}")
+    print(f"Source: {source_path}")
+    print(f"Target: {target_path}")
 
     stream_df = (
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "csv")
         .option("cloudFiles.inferColumnTypes", "true")
+        .option("cloudFiles.schemaEvolutionMode", "rescue")
         .option("cloudFiles.schemaLocation", schema_location)
         .option("header", "true")
         .load(source_path)
     )
+
+    # Match the existing Bronze Delta table schema.
+    # Rescued values are not retained by this implementation.
+    stream_df = stream_df.drop("_rescued_data")
 
     query = (
         stream_df.writeStream
@@ -93,99 +113,74 @@ def ingest_with_autoloader(entity):
     print(f"Auto Loader completed: {entity}")
 ```
 
-## 6. Execute ingestion for all entities
+### Important configuration notes
 
-Run this cell only after verifying the source, metadata, and output paths and confirming the required permissions.
+- `schema_location` stores Auto Loader schema information.
+- `checkpoint_path` stores streaming progress.
+- `availableNow=True` processes available input and then stops.
+- The output targets the existing Bronze Delta folders.
+- The `_rescued_data` column is removed to match the existing Bronze schema. Values contained only in that column are discarded.
+- Keep existing checkpoint folders when rerunning ingestion. Do not delete them to troubleshoot without first reviewing the ingestion state.
+
+## 7. Test One Entity First
+
+Run the following cell:
+
+```python
+ingest_with_autoloader("customers")
+```
+
+Expected successful output:
+
+```text
+Starting Auto Loader: customers
+Source: abfss://source@stdatabricksretailuat.dfs.core.windows.net/customers/
+Target: abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/customers/
+Auto Loader completed: customers
+```
+
+A successful run confirms that the `customers` stream completed. It does not by itself prove that new records were inserted.
+
+## 8. Run All Entities
+
+After confirming each target schema is compatible and the checkpoint state is correct, run the following cell.
 
 ```python
 for entity in entities:
     ingest_with_autoloader(entity)
 ```
 
-The notebook processes the four entities sequentially. `availableNow=True` processes available new files and then stops.
+Review the output for each entity and confirm that all four runs complete without errors.
 
-## 7. Register the output as Unity Catalog tables
+**Duplicate-data precaution:** These writes use append mode. If an entity's existing Bronze data was loaded by another process, Auto Loader may append duplicate records. Use a consistent ingestion process and checkpoint for each entity; do not blindly rerun with new checkpoints.
 
-After successful ingestion, register each Delta output folder as a table.
+## 9. Validate Bronze Data
 
-```sql
-CREATE TABLE IF NOT EXISTS retailuat.bronze.customers_autoloader
-USING DELTA
-LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/customers_autoloader/';
-
-CREATE TABLE IF NOT EXISTS retailuat.bronze.products_autoloader
-USING DELTA
-LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/products_autoloader/';
-
-CREATE TABLE IF NOT EXISTS retailuat.bronze.stores_autoloader
-USING DELTA
-LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/stores_autoloader/';
-
-CREATE TABLE IF NOT EXISTS retailuat.bronze.orders_autoloader
-USING DELTA
-LOCATION 'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/orders_autoloader/';
-```
-
-Ensure Unity Catalog external locations and privileges cover these four output folders before running the SQL. Alternatively, configure the output locations under an already-authorized external location.
-
-## 8. Validate ingestion
-
-Run in a Python cell:
+Run the following cell to check the existing Delta data.
 
 ```python
 for entity in entities:
-    table_name = f"retailuat.bronze.{entity}_autoloader"
+    print(f"Bronze entity: {entity}")
 
-    print(f"{table_name}: {spark.table(table_name).count()} rows")
+    display(
+        spark.read.format("delta")
+        .load(f"{bronze_base}{entity}/")
+        .limit(10)
+    )
 ```
 
-To preview records:
+Review the displayed rows and confirm the expected columns and records are present.
 
-```python
-display(
-    spark.table("retailuat.bronze.orders_autoloader").limit(10)
-)
-```
+## 10. Final Checklist
 
-Repeat for other entities as required.
+- [ ] Source CSV files are present.
+- [ ] Unity Catalog access is configured.
+- [ ] Metadata volume is available.
+- [ ] Auto Loader function runs successfully.
+- [ ] `customers` test succeeds.
+- [ ] `products`, `stores`, and `orders` are processed.
+- [ ] Bronze Delta data is validated.
+- [ ] Checkpoints and schema information are retained.
+- [ ] No unintended duplicate records are introduced.
 
-## 9. Incremental processing
-
-1. Run the notebook for the initial batch of files.
-2. Add a new CSV file to the appropriate source entity folder.
-3. Run the notebook again.
-4. Auto Loader uses the existing checkpoint to identify newly discovered files.
-5. Validate the corresponding output table.
-
-Keep the schema and checkpoint paths unchanged between runs. Do not delete them during normal operation.
-
-## 10. Important considerations
-
-- Auto Loader processes files incrementally; it does not automatically transform data into Silver or Gold.
-- Silver and Gold transformations are implemented as separate pipeline steps.
-- `availableNow=True` is suitable for batch-style incremental runs. Schedule the notebook as a Databricks Job for recurring ingestion.
-- The initial load and subsequent incremental runs should be validated using row counts and sample records.
-- Do not claim successful execution until the notebook cells finish without errors and the output tables have been validated.
-
-## 11. Expected architecture
-
-```text
-ADLS Gen2 — source
-        |
-        | CSV files
-        v
-Databricks Auto Loader
-        |
-        | Schema and checkpoint metadata
-        v
-ADLS Gen2 — Bronze Auto Loader output
-        |
-        v
-Unity Catalog Bronze tables
-        |
-        v
-Silver transformations
-        |
-        v
-Gold business tables
-```
+**Result:** Auto Loader ingestion is implemented using ADLS Gen2, Unity Catalog access, schema tracking, streaming checkpoints, and Delta Lake Bronze targets.
