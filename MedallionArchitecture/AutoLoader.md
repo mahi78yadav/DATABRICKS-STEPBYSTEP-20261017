@@ -1,86 +1,106 @@
 # Auto Loader Ingestion
 
-### Cell 1 — Configure source, Bronze, schema, and checkpoint paths
+### Cell 1 — Configure storage paths and entity names
 
 ```python
 storage_account = "stdatabricksretailuat"
 
-source_path = (
-    f"abfss://source@{storage_account}.dfs.core.windows.net/orders/"
+source_base = (
+    f"abfss://source@{storage_account}.dfs.core.windows.net/"
 )
 
-bronze_path = (
-    f"abfss://bronze@{storage_account}.dfs.core.windows.net/orders_autoloader/"
-)
-
-schema_location = (
+bronze_base = (
     f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-    "autoloader_metadata/orders/schema/"
 )
 
-checkpoint_path = (
-    f"abfss://bronze@{storage_account}.dfs.core.windows.net/"
-    "autoloader_metadata/orders/checkpoint/"
-)
+catalog_name = "retailuat"
+
+entities = ["customers", "products", "stores", "orders"]
 ```
 
-### Cell 2 — Read new CSV files using Auto Loader
+### Cell 2 — Define Auto Loader ingestion for all entities
 
 ```python
-orders_stream = (
-    spark.readStream
-    .format("cloudFiles")
-    .option("cloudFiles.format", "csv")
-    .option("cloudFiles.inferColumnTypes", "true")
-    .option("cloudFiles.schemaLocation", schema_location)
-    .option("header", "true")
-    .load(source_path)
-)
+def ingest_with_autoloader(entity):
+    source_path = f"{source_base}{entity}/"
+    target_path = f"{bronze_base}{entity}_autoloader/"
+
+    schema_location = (
+        f"{bronze_base}autoloader_metadata/{entity}/schema/"
+    )
+
+    checkpoint_path = (
+        f"{bronze_base}autoloader_metadata/{entity}/checkpoint/"
+    )
+
+    print(f"Starting Auto Loader: {entity}")
+
+    stream_df = (
+        spark.readStream
+        .format("cloudFiles")
+        .option("cloudFiles.format", "csv")
+        .option("cloudFiles.inferColumnTypes", "true")
+        .option("cloudFiles.schemaLocation", schema_location)
+        .option("header", "true")
+        .load(source_path)
+    )
+
+    query = (
+        stream_df.writeStream
+        .format("delta")
+        .outputMode("append")
+        .option("checkpointLocation", checkpoint_path)
+        .trigger(availableNow=True)
+        .start(target_path)
+    )
+
+    query.awaitTermination()
+
+    print(f"Auto Loader completed: {entity}")
 ```
 
-### Cell 3 — Incrementally write new records to Bronze Delta
+### Cell 3 — Execute ingestion for all entities
 
 ```python
-query = (
-    orders_stream.writeStream
-    .format("delta")
-    .outputMode("append")
-    .option("checkpointLocation", checkpoint_path)
-    .trigger(availableNow=True)
-    .start(bronze_path)
-)
-
-query.awaitTermination()
-
-print("Auto Loader ingestion completed")
+for entity in entities:
+    ingest_with_autoloader(entity)
 ```
 
-### Cell 4 — Register the Auto Loader output as a Unity Catalog table
+### Cell 4 — Register Auto Loader tables in Unity Catalog
 
 ```python
-spark.sql("""
-    CREATE TABLE IF NOT EXISTS retailuat.bronze.orders_autoloader
-    USING DELTA
-    LOCATION
-    'abfss://bronze@stdatabricksretailuat.dfs.core.windows.net/orders_autoloader/'
-""")
+for entity in entities:
+    target_path = f"{bronze_base}{entity}_autoloader/"
+
+    spark.sql(f"""
+        CREATE TABLE IF NOT EXISTS
+        {catalog_name}.bronze.{entity}_autoloader
+        USING DELTA
+        LOCATION '{target_path}'
+    """)
+
+    print(f"Registered: {catalog_name}.bronze.{entity}_autoloader")
 ```
 
-### Cell 5 — Validate ingested data
+### Cell 5 — Validate Auto Loader tables
 
 ```python
-df = spark.table("retailuat.bronze.orders_autoloader")
+for entity in entities:
+    table_name = f"{catalog_name}.bronze.{entity}_autoloader"
+    df = spark.table(table_name)
 
-print("Auto Loader record count:", df.count())
-display(df.limit(10))
+    print(f"{table_name}: {df.count()} records")
+    display(df.limit(10))
 ```
 
 ### Important Notes
 
-- Source: `source/orders/`.
-- Auto Loader output: `bronze/orders_autoloader/`.
-- Schema and checkpoint metadata are stored separately under `bronze/autoloader_metadata/orders/`.
-- Configure Unity Catalog external locations and permissions to cover these paths before running.
-- `availableNow=True` processes available new files and stops. Schedule the notebook as a Job for recurring ingestion.
-- Keep the checkpoint between runs; do not delete it during normal operation.
-- This example handles the `orders` entity. Use separate output and checkpoint paths for other entities.
+- **Source:** `source/customers/`, `source/products/`, `source/stores/`, `source/orders/`.
+- **Bronze outputs:** `bronze/customers_autoloader/`, `bronze/products_autoloader/`, `bronze/stores_autoloader/`, `bronze/orders_autoloader/`.
+- Each entity has its own schema and checkpoint paths under `bronze/autoloader_metadata/`.
+- Ensure the Unity Catalog external location and permissions cover the output and metadata paths.
+- `availableNow=True` processes currently available new files and then stops.
+- Retain checkpoints between runs so previously processed files are not processed again.
+- This creates separate Auto Loader tables. Your current Silver notebook reads the original Bronze tables, so update it later if you want Silver to consume these Auto Loader outputs.
+- Run the notebook using compatible Databricks compute with Structured Streaming and Auto Loader support.
+
