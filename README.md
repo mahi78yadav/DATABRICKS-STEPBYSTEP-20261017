@@ -293,3 +293,6 @@ Refer to the detailed notebook implementation and execution steps:
 
 [Silver Layer Implementation](MedallionArchitecture/Silver.md)
 
+## 11. Implementing Gold Layer
+
+[Gold Layer Implementation](MedallionArchitecture/Gold.md)
