@@ -305,4 +305,8 @@ Refer to the detailed notebook implementation and execution steps:
 
 [Databricks_Data_Quality_Implementation](MedallionArchitecture/Databricks_Data_Quality_Implementation.md)
 
+## 14.  Implementing Pipeline Implementation
+
+[PipelineImplementation](MedallionArchitecture/PipelineImplementation.md)
+
 
