@@ -1,0 +1,11 @@
+customer_id,customer_name,city,state,customer_segment,registration_date
+C001,Ravi Kumar,Hyderabad,Telangana,Premium,2025-01-15
+C002,Suresh Reddy,Vijayawada,Andhra Pradesh,Regular,2025-02-20
+C003,Anil Kumar,Warangal,Telangana,Regular,2025-03-10
+C004,Priya Sharma,Bangalore,Karnataka,Premium,2025-04-05
+C005,John Thomas,Chennai,Tamil Nadu,Regular,2025-05-18
+C006,Lakshmi Devi,Hyderabad,Telangana,Premium,2025-06-12
+C007,Ramesh Naidu,Visakhapatnam,Andhra Pradesh,Regular,2025-07-08
+C008,Sneha Rao,Pune,Maharashtra,Premium,2025-08-22
+C009,Vinod Yadav,Hyderabad,Telangana,Regular,2025-09-14
+C010,Meena Patel,Mumbai,Maharashtra,Premium,2025-10-03

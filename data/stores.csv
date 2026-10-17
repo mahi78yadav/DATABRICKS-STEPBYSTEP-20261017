@@ -1,0 +1,8 @@
+store_id,store_name,city,state,region
+S001,Bachupally Store,Hyderabad,Telangana,South
+S002,Miyapur Store,Hyderabad,Telangana,South
+S003,Vijayawada Store,Vijayawada,Andhra Pradesh,South
+S004,Bangalore Central,Bangalore,Karnataka,South
+S005,Chennai Central,Chennai,Tamil Nadu,South
+S006,Pune Store,Pune,Maharashtra,West
+S007,Mumbai Store,Mumbai,Maharashtra,West

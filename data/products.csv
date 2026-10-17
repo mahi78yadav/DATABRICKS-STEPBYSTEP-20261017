@@ -1,0 +1,11 @@
+product_id,product_name,category,subcategory,unit_price
+P001,Laptop,Electronics,Computers,55000
+P002,Mobile Phone,Electronics,Mobile,25000
+P003,Headphones,Electronics,Accessories,3000
+P004,Office Chair,Furniture,Chairs,5000
+P005,Office Table,Furniture,Tables,10000
+P006,Monitor,Electronics,Computers,18000
+P007,Keyboard,Electronics,Accessories,1500
+P008,Mouse,Electronics,Accessories,800
+P009,Printer,Electronics,Office Equipment,12000
+P010,Bookshelf,Furniture,Storage,7500
