@@ -300,3 +300,9 @@ Refer to the detailed notebook implementation and execution steps:
 ## 12. Implementing Auto Loader Ingestion
 
 [Auto Loader Implementation](MedallionArchitecture/AutoLoader.md)
+
+## 13.  Implementing Auto Loader Ingestion
+
+[Databricks_Data_Quality_Implementation](MedallionArchitecture/Databricks_Data_Quality_Implementation.md)
+
+
