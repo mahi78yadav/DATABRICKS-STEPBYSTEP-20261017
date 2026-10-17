@@ -296,3 +296,7 @@ Refer to the detailed notebook implementation and execution steps:
 ## 11. Implementing Gold Layer
 
 [Gold Layer Implementation](MedallionArchitecture/Gold.md)
+
+## 12. Implementing Auto Loader Ingestion
+
+[Auto Loader Implementation](MedallionArchitecture/AutoLoader.md)
