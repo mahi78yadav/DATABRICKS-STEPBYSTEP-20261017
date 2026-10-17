@@ -1,0 +1,9 @@
+order_id,customer_id,product_id,store_id,order_date,quantity,order_status,payment_method
+O021,C011,P011,S001,2026-10-11,1,Completed,UPI
+O022,C012,P012,S008,2026-10-11,2,Completed,Credit Card
+O023,C013,P013,S009,2026-10-12,1,Completed,Debit Card
+O024,C014,P001,S002,2026-10-12,1,Completed,UPI
+O025,C015,P004,S003,2026-10-13,2,Cancelled,Cash
+O026,C016,P006,S008,2026-10-13,1,Completed,Credit Card
+O027,C014,P010,S009,2026-10-14,3,Completed,Debit Card
+O028,C012,P002,S001,2026-10-14,1,Completed,UPI
